@@ -1,10 +1,215 @@
 <html>
+    <head>
+        <title>Pandemic Buddy</title>
+        <style>
+            #player-deck {
+                float: left;
+            }
+            #infection-deck {
+                float: right;
+                max-width: 50%;
+            }
+            #infection-deck-discard {
+                background-color: rgba(127, 127, 127, 0.5);
+            }
+            .infection-deck-card-set {
+                margin: 5px;
+                background-color: rgba(255, 197, 131, 0.5);
+            }
+            .infection-deck-card {
+                padding: 5px;
+                white-space: nowrap;
+                display: inline-block;
+            }
+            .disease-Black {
+                background-color: #333333;
+                color: white;
+            }
+            .disease-Blue {
+                background-color: rgb(84, 84, 255);
+                color: white;
+            }
+            .disease-Yellow {
+                background-color: rgb(255, 255, 112);
+                color: black;
+            }
+            .disease-Red {
+                background-color: rgb(255, 104, 104);
+                color: white;
+            }
+            .hidden {
+                display: none;
+            }
+        </style>
+    </head>
     <body>
-        <h1>Hello World!</h1>
-    <ul>
-        <li>Geeks        </li>
-    <li>Nerds</li>
-<li><strong>Norms</strong></li>    
-</ul>
+        <script src="pandemic-buddy.js"></script>
+        <form>
+            <label for="pd-players">Num players: </label><input type="number" id="pd-players" value="4"></input>
+            <label for="pd-events">Num funded events: </label><input type="number" id="pd-events" value="0"></input>
+            <input type="button" id="pd-start" value="Start Player Deck"></input>
+        </form>
+        <table id="player-deck" class="hidden">
+            <tbody>
+                <tr id="num-players"><td>Num players</td><td></td><td class="value">0</td></tr>
+                <tr id="num-starting-cards"><td>Num starting cards</td><td></td><td class="value">0</td></tr>
+                <tr id="num-turns"><td>Num turns</td><td></td><td class="value">0</td></tr>
+                <tr id="num-cards-left-in-pile"><td>Num cards left in pile</td><td></td><td class="value">0</td></tr>
+                <tr id="num-event-cards"><td>Num event cards</td><td><button id="take-event">Take</button></td><td class="value">0</td></tr>
+                <tr id="num-epidemic-cards"><td>Num epidemic cards</td><td><button id="take-epidemic">Take</button></td><td class="value">0</td></tr>
+                <tr id="num-red-cards" class="disease-Red"><td>Num red cards</td><td><button id="take-red">Take</button></td><td class="value">0</td></tr>
+                <tr id="num-blue-cards" class="disease-Blue"><td>Num blue cards</td><td><button id="take-blue">Take</button></td><td class="value">0</td></tr>
+                <tr id="num-yellow-cards" class="disease-Yellow"><td>Num yellow cards</td><td><button id="take-yellow">Take</button></td><td class="value">0</td></tr>
+                <tr id="num-black-cards" class="disease-Black"><td>Num black cards</td><td><button id="take-black">Take</button></td><td class="value">0</td></tr>
+            </tbody>
+        </table>
+        <div id="infection-deck" class="hidden">
+            <input type="checkbox" id="intensify-toggle"><label for="intensify-toggle">Intensify</label>
+            <div id="infection-deck-discard" class="infection-deck-card-set"></div>
+            <div id="infection-deck-cards"></div>
+        </div>
+        <span id="infection-deck-card-template" class="infection-deck-card hidden">
+            <span class="city">CityName</span>
+        </div>
+        <div id="infection-deck-card-set-template" class="infection-deck-card-set hidden"></div>
+
+        
+        <script>
+                var playerDeck;
+                var infectionDeck = new InfectionDeck();
+                
+                document.getElementById("pd-start").addEventListener("click", function() {
+                    var numPlayers = parseInt(document.getElementById("pd-players").value);
+                    var numEvents = parseInt(document.getElementById("pd-events").value);
+                    playerDeck = new PlayerDeck(numPlayers, numEvents);
+                    document.getElementById("player-deck").classList.remove("hidden");
+                    document.getElementById("infection-deck").classList.remove("hidden");
+                    refreshPlayerDeck();
+                    refreshInfectionDeck();
+                });
+
+                document.getElementById("take-event").addEventListener("click", () => { 
+                    try {
+                        playerDeck.removeEventCard(); 
+                        refreshPlayerDeck();
+                    } catch (e) { alert(e); } 
+                });
+                document.getElementById("take-epidemic").addEventListener("click", () => { 
+                    try {
+                        playerDeck.removeEpidemicCard(); 
+                        refreshPlayerDeck();
+                    } catch (e) { alert(e); }  
+                });
+                document.getElementById("take-red").addEventListener("click", () => { 
+                    try {
+                        playerDeck.removeCityCard(Diseases.RED); 
+                        refreshPlayerDeck(); 
+                    } catch (e) { alert(e); } 
+                });
+                document.getElementById("take-blue").addEventListener("click", () => { 
+                    try {
+                        playerDeck.removeCityCard(Diseases.BLUE); 
+                        refreshPlayerDeck();
+                    } catch (e) { alert(e); } 
+                });
+                document.getElementById("take-yellow").addEventListener("click", () => { 
+                    try {
+                        playerDeck.removeCityCard(Diseases.YELLOW); 
+                        refreshPlayerDeck(); 
+                    } catch (e) { alert(e); } 
+                });
+                document.getElementById("take-black").addEventListener("click", () => { 
+                    try {
+                        playerDeck.removeCityCard(Diseases.BLACK);
+                        refreshPlayerDeck();
+                    } catch (e) { alert(e); } 
+                });
+                
+                function refreshPlayerDeck() {
+                    refreshValue("num-players", playerDeck.numPlayers);
+                    refreshValue("num-starting-cards", playerDeck.numStartingCards);
+                    
+                    if (playerDeck.numStartingCards > 0) {
+                        console.log("Starting...");
+                        refreshValue("num-turns", "Not started");
+                        refreshValue("num-cards-left-in-pile", "Not started");
+                    }
+                    else {
+                        refreshValue("num-turns", playerDeck.turnsLeft());
+                        refreshValue("num-cards-left-in-pile", playerDeck.cardsLeftInPile());
+                    }
+                    
+                    refreshValue("num-event-cards", playerDeck.numEventCards);
+                    refreshValue("num-epidemic-cards", playerDeck.numEpidemicCards);
+                    
+                    refreshValue("num-red-cards", playerDeck.numCityCards[Diseases.RED.name]);
+                    refreshValue("num-blue-cards", playerDeck.numCityCards[Diseases.BLUE.name]);
+                    refreshValue("num-yellow-cards", playerDeck.numCityCards[Diseases.YELLOW.name]);
+                    refreshValue("num-black-cards", playerDeck.numCityCards[Diseases.BLACK.name]);
+                }
+    
+                function refreshValue(elementId, value) {
+                    document.getElementById(elementId).getElementsByClassName("value")[0].innerHTML = value;
+                }
+
+                function refreshInfectionDeck() {
+                    var deck = document.getElementById("infection-deck-cards");
+                    var cardTemplate = document.getElementById("infection-deck-card-template");
+                    var setTemplate = document.getElementById("infection-deck-card-set-template");
+                    var discards = document.getElementById("infection-deck-discard");
+                    discards.innerHTML = "";
+                    refreshInfectionDeckSet(discards, -1, infectionDeck.discardPile, cardTemplate);
+                    deck.innerHTML = "";
+                    for (var i = 0; i < infectionDeck.cardSets.length; i++) 
+                    {
+                        var set = infectionDeck.cardSets[i];
+                        var setNode = setTemplate.cloneNode(true);
+                        setNode.removeAttribute("id");
+                        refreshInfectionDeckSet(setNode, i, set, cardTemplate);
+                        setNode.classList.remove("hidden");
+                        deck.appendChild(setNode);
+                    }
+                }
+
+                function refreshInfectionDeckSet(setNode, setIndex, cardArray, cardTemplate) {
+                    for (var i = 0; i < cardArray.length; i++)
+                    {
+                        var card = cardArray[i];
+                        var cardNode = cardTemplate.cloneNode(true);
+                        cardNode.removeAttribute("id");
+                        var citySpan = cardNode.getElementsByClassName("city")[0];
+                        citySpan.classList.add("disease-" + card.city.disease.name);
+                        citySpan.innerHTML = card.name;
+
+                        addInfectionCardClickHandler(cardNode, setIndex, i);
+                        
+                        cardNode.classList.remove("hidden");
+                        setNode.appendChild(cardNode);
+                    }
+                }
+
+                var intensifyToggle = document.getElementById("intensify-toggle");
+
+                function addInfectionCardClickHandler(cardNode, setIndex, cardIndex) {
+                    cardNode.addEventListener("click", () => { 
+                            if (intensifyToggle.checked)
+                            {
+                                if (setIndex === infectionDeck.cardSets.length - 1)
+                                {
+                                    infectionDeck.takeIntensifyCard(setIndex, cardIndex);
+                                    intensifyToggle.checked = false;
+                                    refreshInfectionDeck();
+                                }
+                            }
+                            else 
+                            {
+                                if (setIndex === 0) {
+                                    infectionDeck.takeInfectCard(cardIndex);
+                                    refreshInfectionDeck();
+                                }
+                            }
+                        });
+                }
+            </script>
     </body>
 </html>
