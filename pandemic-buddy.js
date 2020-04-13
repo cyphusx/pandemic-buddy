@@ -218,7 +218,7 @@ var Cities = [
     new City("Lagos", Diseases.YELLOW),
     new City("Lima", Diseases.YELLOW),
     new City("London", Diseases.BLUE),
-    new City("Los Angeles", Diseases.BLUE),
+    new City("Los Angeles", Diseases.YELLOW),
     new City("Madrid", Diseases.BLUE),
     new City("Manila", Diseases.RED),
     new City("Mexico City", Diseases.YELLOW),
