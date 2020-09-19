@@ -98,6 +98,18 @@ class PlayerDeck {
         this.checkStarted();
         return this.numCardsPerPile.length > 0 ? this.numCardsPerPile[0] : 0;
     }
+
+    isEpidemicLeftInPile() {
+        this.checkStarted();
+        if (this.numCardsPerPile.length === 0)
+        {
+            return false;
+        }
+        else
+        {
+            return this.numCardsPerPile.length <= this.numEpidemicCards;
+        }
+    }
 }
 
 class InfectionDeck {

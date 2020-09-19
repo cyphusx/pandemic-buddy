@@ -55,6 +55,7 @@
                 <tr id="num-starting-cards"><td>Num starting cards</td><td></td><td class="value">0</td></tr>
                 <tr id="num-turns"><td>Num turns</td><td></td><td class="value">0</td></tr>
                 <tr id="num-cards-left-in-pile"><td>Num cards left in pile</td><td></td><td class="value">0</td></tr>
+                <tr id="epidemic-card-left-in-pile"><td>Epidemic card left in pile?</td><td></td><td class="value">true</td></tr>
                 <tr id="num-event-cards"><td>Num event cards</td><td><button id="take-event">Take</button></td><td class="value">0</td></tr>
                 <tr id="num-epidemic-cards"><td>Num epidemic cards</td><td><button id="take-epidemic">Take</button></td><td class="value">0</td></tr>
                 <tr id="num-red-cards" class="disease-Red"><td>Num red cards</td><td><button id="take-red">Take</button></td><td class="value">0</td></tr>
@@ -133,10 +134,12 @@
                         console.log("Starting...");
                         refreshValue("num-turns", "Not started");
                         refreshValue("num-cards-left-in-pile", "Not started");
+                        refreshValue("epidemic-card-left-in-pile", "Not started");
                     }
                     else {
                         refreshValue("num-turns", playerDeck.turnsLeft());
                         refreshValue("num-cards-left-in-pile", playerDeck.cardsLeftInPile());
+                        refreshValue("epidemic-card-left-in-pile", playerDeck.isEpidemicLeftInPile());
                     }
                     
                     refreshValue("num-event-cards", playerDeck.numEventCards);
