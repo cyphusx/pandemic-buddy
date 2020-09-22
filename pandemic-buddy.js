@@ -242,15 +242,6 @@ class Card {
     }
 }
 
-class PlayerCard extends Card {}
-
-class CityPlayerCard extends PlayerCard {
-    constructor(city) {
-        super(city.name);
-        this.city = city;
-    }
-}
-
 class InfectionCard extends Card {
     constructor(city) {
         super(city.name);
@@ -317,7 +308,5 @@ var Cities = [
 ];
 
 var InfectionCards = Cities.map(city => new InfectionCard(city));
-
-var CityPlayerCards = Cities.map(city => new CityPlayerCard(city));
 
 
