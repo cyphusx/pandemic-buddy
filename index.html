@@ -9,6 +9,18 @@
                 float: right;
                 max-width: 50%;
             }
+            #game-controls {
+                clear: both;
+            }
+            #event-log {
+                clear: both;
+            }
+            .event-log-item:nth-child(even) {
+                background-color: rgba(127, 127, 127, 0.5);
+            }
+            .event-log-item:nth-child(odd) {
+                background-color: rgba(200, 200, 200, 0.5);
+            }
             #infection-deck-discard {
                 background-color: rgba(127, 127, 127, 0.5);
             }
@@ -44,7 +56,8 @@
     </head>
     <body>
         <script src="pandemic-buddy.js"></script>
-        <form>
+        <form id="game-config">
+            <label for="pd-name">Game name: </label><input type="textbox" id="pd-name"></input>
             <label for="pd-players">Num players: </label><input type="number" id="pd-players" value="4"></input>
             <label for="pd-events">Num funded events: </label><input type="number" id="pd-events" value="0"></input>
             <input type="button" id="pd-start" value="Start Player Deck"></input>
@@ -65,90 +78,144 @@
             </tbody>
         </table>
         <div id="infection-deck" class="hidden">
-            <input type="checkbox" id="intensify-toggle"><label for="intensify-toggle">Intensify</label>
+            <input type="checkbox" id="intensify-toggle"></input><label for="intensify-toggle">Intensify</label>
             <div id="infection-deck-discard" class="infection-deck-card-set"></div>
             <div id="infection-deck-cards"></div>
         </div>
         <span id="infection-deck-card-template" class="infection-deck-card hidden">
             <span class="city">CityName</span>
-        </div>
+        </span>
         <div id="infection-deck-card-set-template" class="infection-deck-card-set hidden"></div>
+        <div id="event-log" class="hidden"></div>
+        <div id="event-log-item-template" class="event-log-item hidden">
+            <span class="description">Description</span>
+        </div>
 
         
         <script>
-                var playerDeck;
-                var infectionDeck = new InfectionDeck();
+                var game;
                 
+                if (history.state) {
+                    loadState(history.state);
+                    showGame();
+                }
+
                 document.getElementById("pd-start").addEventListener("click", function() {
+                    var gameName = document.getElementById("pd-name").value;
                     var numPlayers = parseInt(document.getElementById("pd-players").value);
                     var numEvents = parseInt(document.getElementById("pd-events").value);
-                    playerDeck = new PlayerDeck(numPlayers, numEvents);
-                    document.getElementById("player-deck").classList.remove("hidden");
-                    document.getElementById("infection-deck").classList.remove("hidden");
-                    refreshPlayerDeck();
-                    refreshInfectionDeck();
+                    var playerDeck = new PlayerDeck(numPlayers, numEvents);
+                    var infectionDeck = new InfectionDeck();
+                    game = new Game(gameName, playerDeck, infectionDeck);
+                    rememberState();
+                    showGame();
                 });
 
-                document.getElementById("take-event").addEventListener("click", () => { 
+                function showGame() {
+                    document.getElementById("game-config").classList.add("hidden");
+
+                    document.getElementById("player-deck").classList.remove("hidden");
+                    document.getElementById("infection-deck").classList.remove("hidden");
+                    document.getElementById("event-log").classList.remove("hidden");
+
+                    window.document.title = "Pandemic Buddy : " + game.name;
+
+                    refreshPlayerDeck();
+                    refreshInfectionDeck();
+                    refreshEventLog();
+                }
+
+                function hideGame() {
+                    document.getElementById("game-config").classList.remove("hidden");
+                    
+                    document.getElementById("player-deck").classList.add("hidden");
+                    document.getElementById("infection-deck").classList.add("hidden");
+                    document.getElementById("event-log").classList.add("hidden");
+
+                    refreshPlayerDeck();
+                    refreshInfectionDeck();
+                    refreshEventLog();
+                }
+
+                function removePlayerDeckCard(action) {
                     try {
-                        playerDeck.removeEventCard(); 
+                        action(); 
+                        rememberState();
                         refreshPlayerDeck();
+                        refreshEventLog();
                     } catch (e) { alert(e); } 
+                }
+
+                document.getElementById("take-event").addEventListener("click", () => { 
+                    removePlayerDeckCard(() => { game.playerDeck.removeEventCard(); });
                 });
                 document.getElementById("take-epidemic").addEventListener("click", () => { 
-                    try {
-                        playerDeck.removeEpidemicCard(); 
-                        refreshPlayerDeck();
-                    } catch (e) { alert(e); }  
-                });
-                document.getElementById("take-red").addEventListener("click", () => { 
-                    try {
-                        playerDeck.removeCityCard(Diseases.RED); 
-                        refreshPlayerDeck(); 
-                    } catch (e) { alert(e); } 
-                });
-                document.getElementById("take-blue").addEventListener("click", () => { 
-                    try {
-                        playerDeck.removeCityCard(Diseases.BLUE); 
-                        refreshPlayerDeck();
-                    } catch (e) { alert(e); } 
-                });
-                document.getElementById("take-yellow").addEventListener("click", () => { 
-                    try {
-                        playerDeck.removeCityCard(Diseases.YELLOW); 
-                        refreshPlayerDeck(); 
-                    } catch (e) { alert(e); } 
-                });
-                document.getElementById("take-black").addEventListener("click", () => { 
-                    try {
-                        playerDeck.removeCityCard(Diseases.BLACK);
-                        refreshPlayerDeck();
-                    } catch (e) { alert(e); } 
+                    removePlayerDeckCard(() => { game.playerDeck.removeEpidemicCard(); });
                 });
                 
+                function removeCityCard(disease) {
+                    removePlayerDeckCard(() => { game.playerDeck.removeCityCard(disease); });
+                }
+                
+                document.getElementById("take-red").addEventListener("click", () => { 
+                    removeCityCard(Diseases.RED);
+                });
+                document.getElementById("take-blue").addEventListener("click", () => { 
+                    removeCityCard(Diseases.BLUE);
+                });
+                document.getElementById("take-yellow").addEventListener("click", () => { 
+                    removeCityCard(Diseases.YELLOW);
+                });
+                document.getElementById("take-black").addEventListener("click", () => { 
+                    removeCityCard(Diseases.BLACK);
+                });
+
+                var intensifyToggle = document.getElementById("intensify-toggle");
+
+                function addInfectionCardClickHandler(cardNode, setIndex, cardIndex) {
+                    cardNode.addEventListener("click", () => { 
+                            if (intensifyToggle.checked) {
+                                if (setIndex === game.infectionDeck.cardSets.length - 1) {
+                                    game.infectionDeck.takeIntensifyCard(setIndex, cardIndex);
+                                    intensifyToggle.checked = false;
+                                    rememberState();
+                                    refreshInfectionDeck();
+                                    refreshEventLog();
+                                }
+                            }
+                            else {
+                                if (setIndex === 0) {
+                                    game.infectionDeck.takeInfectCard(cardIndex);
+                                    rememberState();
+                                    refreshInfectionDeck();
+                                    refreshEventLog();
+                                }
+                            }
+                        });
+                }
+
                 function refreshPlayerDeck() {
-                    refreshValue("num-players", playerDeck.numPlayers);
-                    refreshValue("num-starting-cards", playerDeck.numStartingCards);
+                    refreshValue("num-players", game.playerDeck.numPlayers);
+                    refreshValue("num-starting-cards", game.playerDeck.numStartingCards);
                     
-                    if (playerDeck.numStartingCards > 0) {
-                        console.log("Starting...");
+                    if (game.playerDeck.numStartingCards > 0) {
                         refreshValue("num-turns", "Not started");
                         refreshValue("num-cards-left-in-pile", "Not started");
                         refreshValue("epidemic-card-left-in-pile", "Not started");
                     }
                     else {
-                        refreshValue("num-turns", playerDeck.turnsLeft());
-                        refreshValue("num-cards-left-in-pile", playerDeck.cardsLeftInPile());
-                        refreshValue("epidemic-card-left-in-pile", playerDeck.isEpidemicLeftInPile());
+                        refreshValue("num-turns", game.playerDeck.turnsLeft());
+                        refreshValue("num-cards-left-in-pile", game.playerDeck.cardsLeftInPile());
+                        refreshValue("epidemic-card-left-in-pile", game.playerDeck.isEpidemicLeftInPile());
                     }
                     
-                    refreshValue("num-event-cards", playerDeck.numEventCards);
-                    refreshValue("num-epidemic-cards", playerDeck.numEpidemicCards);
+                    refreshValue("num-event-cards", game.playerDeck.numEventCards);
+                    refreshValue("num-epidemic-cards", game.playerDeck.numEpidemicCards);
                     
-                    refreshValue("num-red-cards", playerDeck.numCityCards[Diseases.RED.name]);
-                    refreshValue("num-blue-cards", playerDeck.numCityCards[Diseases.BLUE.name]);
-                    refreshValue("num-yellow-cards", playerDeck.numCityCards[Diseases.YELLOW.name]);
-                    refreshValue("num-black-cards", playerDeck.numCityCards[Diseases.BLACK.name]);
+                    refreshValue("num-red-cards", game.playerDeck.numCityCards[Diseases.RED.name]);
+                    refreshValue("num-blue-cards", game.playerDeck.numCityCards[Diseases.BLUE.name]);
+                    refreshValue("num-yellow-cards", game.playerDeck.numCityCards[Diseases.YELLOW.name]);
+                    refreshValue("num-black-cards", game.playerDeck.numCityCards[Diseases.BLACK.name]);
                 }
     
                 function refreshValue(elementId, value) {
@@ -161,11 +228,10 @@
                     var setTemplate = document.getElementById("infection-deck-card-set-template");
                     var discards = document.getElementById("infection-deck-discard");
                     discards.innerHTML = "";
-                    refreshInfectionDeckSet(discards, -1, infectionDeck.discardPile, cardTemplate);
+                    refreshInfectionDeckSet(discards, -1, game.infectionDeck.discardPile, cardTemplate);
                     deck.innerHTML = "";
-                    for (var i = 0; i < infectionDeck.cardSets.length; i++) 
-                    {
-                        var set = infectionDeck.cardSets[i];
+                    for (var i = 0; i < game.infectionDeck.cardSets.length; i++) {
+                        var set = game.infectionDeck.cardSets[i];
                         var setNode = setTemplate.cloneNode(true);
                         setNode.removeAttribute("id");
                         refreshInfectionDeckSet(setNode, i, set, cardTemplate);
@@ -175,8 +241,7 @@
                 }
 
                 function refreshInfectionDeckSet(setNode, setIndex, cardArray, cardTemplate) {
-                    for (var i = 0; i < cardArray.length; i++)
-                    {
+                    for (var i = 0; i < cardArray.length; i++) {
                         var card = cardArray[i];
                         var cardNode = cardTemplate.cloneNode(true);
                         cardNode.removeAttribute("id");
@@ -191,27 +256,42 @@
                     }
                 }
 
-                var intensifyToggle = document.getElementById("intensify-toggle");
+                function refreshEventLog() {
+                    var eventLog = document.getElementById("event-log");
+                    var eventTemplate = document.getElementById("event-log-item-template");
+                    eventLog.innerHTML = "";
+                    for (var i = game.events.length - 1; i >= 0; i--) {
+                        var event = game.events[i];
+                        var eventNode = eventTemplate.cloneNode(true);
+                        eventNode.removeAttribute("id");
+                        var eventDescription = eventNode.getElementsByClassName("description")[0];
+                        eventDescription.innerHTML = event;
+                        eventNode.classList.remove("hidden");
+                        eventLog.appendChild(eventNode);
+                    }
+                }
 
-                function addInfectionCardClickHandler(cardNode, setIndex, cardIndex) {
-                    cardNode.addEventListener("click", () => { 
-                            if (intensifyToggle.checked)
-                            {
-                                if (setIndex === infectionDeck.cardSets.length - 1)
-                                {
-                                    infectionDeck.takeIntensifyCard(setIndex, cardIndex);
-                                    intensifyToggle.checked = false;
-                                    refreshInfectionDeck();
-                                }
-                            }
-                            else 
-                            {
-                                if (setIndex === 0) {
-                                    infectionDeck.takeInfectCard(cardIndex);
-                                    refreshInfectionDeck();
-                                }
-                            }
-                        });
+                function rememberState() {
+                    history.pushState(game, "");
+                }
+
+                function loadState(state) {
+                    if (state) {
+                        game = Object.assign(new Game, state);
+                        game.playerDeck = Object.assign(new PlayerDeck, game.playerDeck);
+                        game.infectionDeck = Object.assign(new InfectionDeck, game.infectionDeck);
+                        game.setIsGameEventLoggingEnabled(true);
+                        showGame();
+                    }
+                    else {
+                        game = undefined;
+                        hideGame();
+                    }
+                }
+
+                window.onpopstate = function(event) {
+                    console.log("onpopstate");
+                    loadState(event.state);
                 }
             </script>
     </body>
