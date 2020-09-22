@@ -3,8 +3,44 @@
 const TOTAL_NUM_EPIDEMIC_CARDS = 5;
 const CARDS_PER_TURN = 2;
 
+class Game {
+    constructor(gameName, playerDeck, infectionDeck) {
+        // default constructor used when deserializing history
+        if (gameName === undefined && playerDeck === undefined && infectionDeck === undefined) {
+            return;
+        }
+
+        this.name = gameName;
+        this.playerDeck = playerDeck;
+        this.infectionDeck = infectionDeck;
+        this.events = [];
+
+        this.setIsGameEventLoggingEnabled(true);
+    }
+
+    setIsGameEventLoggingEnabled(enableLogging) {
+        if (enableLogging === true) {
+            this.playerDeck.game = this;
+            this.infectionDeck.game = this;
+        }
+        else {
+            this.playerDeck.game = undefined;
+            this.infectionDeck.game = undefined;
+        }
+    }
+
+    logGameEvent(gameEvent) {
+        this.events.push(gameEvent);
+    }
+}
+
 class PlayerDeck {
     constructor(numPlayers, numEventCards) {
+        // default constructor used when deserializing history
+        if (numPlayers === undefined && numEventCards === undefined) {
+            return;
+        }
+
         this.numPlayers = numPlayers;
         this.numStartingCards = 2 * numPlayers;
         // nine starting cards if a 3-player game
@@ -17,7 +53,7 @@ class PlayerDeck {
         this.numCityCards = {};
         for (var diseaseKey in Diseases) {
             var disease = Diseases[diseaseKey];
-            this.numCityCards[disease.name] = CityPlayerCards.filter(card => card.city.disease === disease).length;
+            this.numCityCards[disease.name] = Cities.filter(city => city.disease === disease).length;
             numCards += this.numCityCards[disease.name];
         }
         
@@ -38,6 +74,12 @@ class PlayerDeck {
         }
     }
 
+    logGameEvent(gameEvent) {
+        if (this.game !== undefined) {
+            this.game.logGameEvent("[PlayerDeck] " + gameEvent);
+        }
+    }
+
     _removeCard() {
         if (this.numStartingCards > 0) {
             this.numStartingCards--;
@@ -48,7 +90,6 @@ class PlayerDeck {
                 this.numCardsPerPile.shift();
             }
         }
-        
     }
 
     removeCityCard(disease) {
@@ -56,8 +97,16 @@ class PlayerDeck {
         if (before <= 0) {
             throw "No cards of that type left";
         }
+
+        if (this.numStartingCards === 0
+            && this.cardsLeftInPile() === 1
+            && this.isEpidemicLeftInPile()) {
+            throw "Epidemic card not yet drawn from this pile (did you miss it?)";
+        }
+
         this.numCityCards[disease.name] = before - 1;
         this._removeCard();
+        this.logGameEvent(disease.name + " card drawn");
     }
 
     removeEpidemicCard() {
@@ -67,6 +116,7 @@ class PlayerDeck {
         }
         this.numEpidemicCards--;
         this._removeCard();
+        this.logGameEvent("Epidemic card drawn");
     }
 
     removeEventCard() {
@@ -75,6 +125,7 @@ class PlayerDeck {
         }
         this.numEventCards--;
         this._removeCard();
+        this.logGameEvent("Funding event card drawn");
     }
 
     checkStarted() {
@@ -110,6 +161,20 @@ class PlayerDeck {
             return this.numCardsPerPile.length <= this.numEpidemicCards;
         }
     }
+
+    numInfectionCardsToDraw() {
+        this.checkStarted();
+        switch (this.numEpidemicCards)
+        {
+            case 0: return 4;
+            case 1: 
+            case 2: return 3;
+            case 3:
+            case 4:
+            case 5: return 2;
+            default: throw "Unsupported number of epidemic cards"
+        }
+    }
 }
 
 class InfectionDeck {
@@ -117,6 +182,12 @@ class InfectionDeck {
         this.discardPile = [];
         // top of the deck first
         this.cardSets = [InfectionCards.slice()];
+    }
+
+    logGameEvent(gameEvent) {
+        if (this.game !== undefined) {
+            this.game.logGameEvent("[InfectionDeck] " + gameEvent);
+        }
     }
 
     _removeCard(setIndex, cardIndex) {
@@ -139,10 +210,12 @@ class InfectionDeck {
     }
 
     takeInfectCard(cardIndex) {
+        this.logGameEvent(this.cardSets[0][cardIndex].name + " drawn");
         this._removeCard(0, cardIndex);
     }
 
     takeIntensifyCard(setIndex, cardIndex) {
+        this.logGameEvent(this.cardSets[setIndex][cardIndex].name + " drawn during Intensify");
         this._removeCard(setIndex, cardIndex);
         this.cardSets.unshift(this.discardPile);
         this.discardPile = [];
@@ -175,19 +248,6 @@ class CityPlayerCard extends PlayerCard {
     constructor(city) {
         super(city.name);
         this.city = city;
-    }
-}
-
-class EpidemicPlayerCard extends PlayerCard {
-    constructor() {
-        super("Epidemic");
-    }
-}
-
-class FundingPlayerCard extends PlayerCard {
-    constructor(name, description) {
-        super(name);
-        this.description = description;
     }
 }
 
@@ -259,9 +319,5 @@ var Cities = [
 var InfectionCards = Cities.map(city => new InfectionCard(city));
 
 var CityPlayerCards = Cities.map(city => new CityPlayerCard(city));
-
-var FundingPlayerCards = [
-    //todo
-];
 
 
