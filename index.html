@@ -1,58 +1,7 @@
 <html>
     <head>
         <title>Pandemic Buddy</title>
-        <style>
-            #player-deck {
-                float: left;
-            }
-            #infection-deck {
-                float: right;
-                max-width: 50%;
-            }
-            #game-controls {
-                clear: both;
-            }
-            #event-log {
-                clear: both;
-            }
-            .event-log-item:nth-child(even) {
-                background-color: rgba(127, 127, 127, 0.5);
-            }
-            .event-log-item:nth-child(odd) {
-                background-color: rgba(200, 200, 200, 0.5);
-            }
-            #infection-deck-discard {
-                background-color: rgba(127, 127, 127, 0.5);
-            }
-            .infection-deck-card-set {
-                margin: 5px;
-                background-color: rgba(255, 197, 131, 0.5);
-            }
-            .infection-deck-card {
-                padding: 5px;
-                white-space: nowrap;
-                display: inline-block;
-            }
-            .disease-Black {
-                background-color: #333333;
-                color: white;
-            }
-            .disease-Blue {
-                background-color: rgb(84, 84, 255);
-                color: white;
-            }
-            .disease-Yellow {
-                background-color: rgb(255, 255, 112);
-                color: black;
-            }
-            .disease-Red {
-                background-color: rgb(255, 104, 104);
-                color: white;
-            }
-            .hidden {
-                display: none;
-            }
-        </style>
+        <link rel="stylesheet" href="style.css">
     </head>
     <body>
         <script src="pandemic-buddy.js"></script>
@@ -62,9 +11,10 @@
             <label for="pd-events">Num funded events: </label><input type="number" id="pd-events" value="0"></input>
             <input type="button" id="pd-start" value="Start Player Deck"></input>
         </form>
-        <table id="player-deck" class="hidden">
-            <tbody>
-                <tr id="num-players"><td>Num players</td><td></td><td class="value">0</td></tr>
+        <div class="main-content">
+            <table id="player-deck" class="hidden">
+                <tbody>
+                    <tr id="num-players"><td>Num players</td><td></td><td class="value">0</td></tr>
                 <tr id="num-starting-cards"><td>Num starting cards</td><td></td><td class="value">0</td></tr>
                 <tr id="num-turns"><td>Num turns</td><td></td><td class="value">0</td></tr>
                 <tr id="num-cards-left-in-pile"><td>Num cards left in pile</td><td></td><td class="value">0</td></tr>
@@ -81,6 +31,7 @@
             <input type="checkbox" id="intensify-toggle"></input><label for="intensify-toggle">Intensify</label>
             <div id="infection-deck-discard" class="infection-deck-card-set"></div>
             <div id="infection-deck-cards"></div>
+        </div>
         </div>
         <span id="infection-deck-card-template" class="infection-deck-card hidden">
             <span class="city">CityName</span>
